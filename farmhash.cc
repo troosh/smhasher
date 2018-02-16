@@ -262,7 +262,7 @@ STATIC_INLINE uint64_t Rotate64(uint64_t val, int shift) {
 // TODO: See https://stackoverflow.com/questions/11228855/header-files-for-simd-intrinsics
 
 #undef x86_64
-#if defined (__x86_64) || defined (__x86_64__)
+#if defined (__x86_64) || defined (__x86_64__) || defined(__e2k__)
 #define x86_64 1
 #else
 #define x86_64 0

@@ -80,7 +80,12 @@ __inline__ unsigned long long int rdtsc()
 #elif defined(__i386__)
     unsigned long long int x;
     __asm__ volatile ("rdtsc" : "=A" (x));
+
     return x;
+#elif defined(__e2k__)
+    unsigned long long int t;
+    asm volatile("rrd %%clkr, %0" : "=r" (t));
+    return t;
 #else
 #define NO_CYCLE_COUNTER
     return 0;

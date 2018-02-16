@@ -78,7 +78,7 @@
 #if !defined(UNALIGNED_OK)
 #if defined(__i386) || defined(__x86_64__) || defined(_M_IX86) ||              \
     defined(_M_X64) || defined(i386) || defined(_X86_) || defined(__i386__) || \
-    defined(_X86_64_)
+    defined(_X86_64_) || (defined(__e2k__) && !defined(__ALIGNED__))
 #define UNALIGNED_OK 1
 #else
 #define UNALIGNED_OK 0
@@ -93,6 +93,8 @@
 
 #if defined(__i386__) || defined(__x86_64__)
 #include <cpuid.h>
+#endif
+#if defined(__i386__) || defined(__x86_64__) || defined(__e2k__)
 #include <x86intrin.h>
 #endif
 #define likely(cond) __builtin_expect(!!(cond), 1)
@@ -809,11 +811,11 @@ uint64_t t1ha_32be(const void *data, size_t len, uint64_t seed) {
 
 #if (defined(__x86_64__) && (defined(__SSE4_2__) || __GNUC_PREREQ(4, 4) ||     \
                              __has_attribute(target))) ||                      \
-    defined(_M_X64) || defined(_X86_64_)
+    defined(_M_X64) || defined(_X86_64_) || defined(__e2k__)
 #include <nmmintrin.h>
 
 uint64_t
-#if __GNUC_PREREQ(4, 4) || __has_attribute(target)
+#if (__GNUC_PREREQ(4, 4) || __has_attribute(target)) && !defined(__e2k__)
     __attribute__((target("sse4.2")))
 #endif
     t1ha_ia32crc(const void *data, size_t len, uint64_t seed) {
@@ -876,19 +878,24 @@ uint64_t
   }
 }
 
-#endif /* __x86_64__ */
+#endif /* __x86_64__ || __e2k__*/
 
 /***************************************************************************/
 
-#if defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64) ||              \
-    defined(i386) || defined(_X86_) || defined(__i386__) || defined(_X86_64_)
+#if defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)                    \
+    || defined(i386) || defined(_X86_) || defined(__i386__) || defined(_X86_64_)  \
+    || defined(__e2k__)
 static uint32_t x86_cpu_features(void) {
 #ifdef __GNUC__
+#ifdef __e2k__
+    return 0x01A000000; /* enable AES-NI, AVX and no AVX2 */
+#else
   uint32_t eax, ebx, ecx, edx;
   if (__get_cpuid_max(0, NULL) < 1)
     return 0;
   __cpuid_count(1, 0, eax, ebx, ecx, edx);
   return ecx;
+#endif
 #elif defined(_MSC_VER)
   int info[4];
   __cpuid(info, 0);
@@ -902,8 +909,9 @@ static uint32_t x86_cpu_features(void) {
 }
 #endif
 
-#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) ||            \
-    defined(_M_X64) || defined(i386) || defined(_X86_) || defined(_X86_64_)
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86)               \
+    || defined(_M_X64) || defined(i386) || defined(_X86_) || defined(_X86_64_) \
+    || defined(__e2k__)
 #include <emmintrin.h>
 #include <smmintrin.h>
 #include <wmmintrin.h>
@@ -971,7 +979,7 @@ t1ha_ia32aes_avx(const void *data, size_t len, uint64_t seed) {
     }
 
     x = _mm_add_epi64(_mm_aesdec_si128(x, _mm_aesenc_si128(y, x)), y);
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__e2k__)
     a = _mm_cvtsi128_si64(x);
 #if defined(__SSE4_1__)
     b = _mm_extract_epi64(x, 1);
@@ -1030,7 +1038,7 @@ t1ha_ia32aes_avx(const void *data, size_t len, uint64_t seed) {
 }
 
 static uint64_t
-#if __GNUC_PREREQ(4, 4) || __has_attribute(target)
+#if (__GNUC_PREREQ(4, 4) || __has_attribute(target)) && !defined(__e2k__)
     __attribute__((target("aes")))
 #endif
     t1ha_ia32aes_noavx(const void *data, size_t len, uint64_t seed) {
@@ -1038,7 +1046,7 @@ static uint64_t
 #else /* ELF && ifunc */
 
 uint64_t
-#if __GNUC_PREREQ(4, 4) || __has_attribute(target)
+#if (__GNUC_PREREQ(4, 4) || __has_attribute(target)) && !defined(__e2k__)
     __attribute__((target("aes")))
 #endif
     t1ha_ia32aes(const void *data, size_t len, uint64_t seed) {
@@ -1089,7 +1097,7 @@ uint64_t
     }
 
     x = _mm_add_epi64(_mm_aesdec_si128(x, _mm_aesenc_si128(y, x)), y);
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__e2k__)
     a = _mm_cvtsi128_si64(x);
 #if defined(__SSE4_1__)
     b = _mm_extract_epi64(x, 1);
@@ -1147,19 +1155,20 @@ uint64_t
   }
 }
 
-#endif /* __i386__ || __x86_64__ */
+#endif /* __i386__ || __x86_64__ || __e2k__ */
 
 /***************************************************************************/
 
 static uint64_t (*t1ha_local_resolve(void))(const void *, size_t, uint64_t) {
-#if defined(__x86_64) || defined(_M_IX86) || defined(_M_X64) ||                \
-    defined(i386) || defined(_X86_) || defined(__i386__) || defined(_X86_64_)
+#if defined(__x86_64) || defined(_M_IX86) || defined(_M_X64)                      \
+    || defined(i386) || defined(_X86_) || defined(__i386__) || defined(_X86_64_)  \
+    || defined(__e2k__)
 
   uint32_t features = x86_cpu_features();
   if (features & (1l << 25))
     return t1ha_ia32aes;
 
-#if defined(__x86_64) || defined(_M_X64) || defined(_X86_64_)
+#if defined(__x86_64) || defined(_M_X64) || defined(_X86_64_) || defined(__e2k__)
   if (features & (1l << 20))
     return t1ha_ia32crc;
 #endif
@@ -1173,7 +1182,7 @@ static uint64_t (*t1ha_local_resolve(void))(const void *, size_t, uint64_t) {
 #endif
 }
 
-#if defined(__ELF__) && (__GNUC_PREREQ(4, 6) || __has_attribute(ifunc))
+#if (defined(__ELF__) && (__GNUC_PREREQ(4, 6) || __has_attribute(ifunc))) && !defined(__e2k__)
 
 uint64_t t1ha_local(const void *data, size_t len, uint64_t seed)
     __attribute__((ifunc("t1ha_local_resolve")));

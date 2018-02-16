@@ -31,7 +31,7 @@ uint32_t crc32c_hw(const void *input, int len, uint32_t crc)
     }
 
     // Blast off the CRC32 calculation
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__e2k__)
     CALC_CRC(_mm_crc32_u64, crc, uint64_t, buf, len);
 #endif
     CALC_CRC(_mm_crc32_u32, crc, uint32_t, buf, len);
@@ -53,7 +53,7 @@ uint64_t crc64c_hw(const void *input, int len, uint32_t seed)
     }
 
     // Blast off the CRC32 calculation
-#ifdef __x86_64__
+#if defined(__x86_64__) || defined(__e2k__)
     CALC_CRC(_mm_crc32_u64, crc, uint64_t, buf, len);
 #endif
     CALC_CRC(_mm_crc32_u32, crc, uint32_t, buf, len);

@@ -224,6 +224,87 @@ static void crc32c_init_hw(void)
     crc32c_zeros(crc32c_short, SHORT);
 }
 
+#if defined(__e2k__)
+#include <smmintrin.h>
+/* Compute CRC-32C using the Intel hardware instruction. */
+uint32_t crc32c(const void *buf, size_t len, uint32_t crc)
+{
+    const unsigned char *next = buf;
+    const unsigned char *end;
+    uint64_t crc0, crc1, crc2;      /* need to be 64 bits for crc32q */
+
+    /* populate shift tables the first time through */
+    pthread_once(&crc32c_once_hw, crc32c_init_hw);
+
+    /* pre-process the crc */
+    crc0 = crc ^ 0xffffffff;
+
+    /* compute the crc for up to seven leading bytes to bring the data pointer
+       to an eight-byte boundary */
+    while (len && ((uintptr_t)next & 7) != 0) {
+        crc0 = _mm_crc32_u8(crc0, *next);
+        next++;
+        len--;
+    }
+
+    /* compute the crc on sets of LONG*3 bytes, executing three independent crc
+       instructions, each on LONG bytes -- this is optimized for the Nehalem,
+       Westmere, Sandy Bridge, and Ivy Bridge architectures, which have a
+       throughput of one crc per cycle, but a latency of three cycles */
+    while (len >= LONG*3) {
+        crc1 = 0;
+        crc2 = 0;
+        end = next + LONG;
+        do {
+            crc0 = _mm_crc32_u64(crc0, *(uint64_t *)&next[LONG * 0]);
+            crc1 = _mm_crc32_u64(crc1, *(uint64_t *)&next[LONG * 1]);
+            crc2 = _mm_crc32_u64(crc2, *(uint64_t *)&next[LONG * 2]);
+            next += 8;
+        } while (next < end);
+        crc0 = crc32c_shift(crc32c_long, crc0) ^ crc1;
+        crc0 = crc32c_shift(crc32c_long, crc0) ^ crc2;
+        next += LONG*2;
+        len -= LONG*3;
+    }
+
+    /* do the same thing, but now on SHORT*3 blocks for the remaining data less
+       than a LONG*3 block */
+    while (len >= SHORT*3) {
+        crc1 = 0;
+        crc2 = 0;
+        end = next + SHORT;
+        do {
+            crc0 = _mm_crc32_u64(crc0, *(uint64_t *)&next[SHORT * 0]);
+            crc1 = _mm_crc32_u64(crc1, *(uint64_t *)&next[SHORT * 1]);
+            crc2 = _mm_crc32_u64(crc2, *(uint64_t *)&next[SHORT * 2]);
+            next += 8;
+        } while (next < end);
+        crc0 = crc32c_shift(crc32c_short, crc0) ^ crc1;
+        crc0 = crc32c_shift(crc32c_short, crc0) ^ crc2;
+        next += SHORT*2;
+        len -= SHORT*3;
+    }
+
+    /* compute the crc on the remaining eight-byte units less than a SHORT*3
+       block */
+    end = next + (len - (len & 7));
+    while (next < end) {
+        crc0 = _mm_crc32_u64(crc0, *(uint64_t *)next);
+        next += 8;
+    }
+    len &= 7;
+
+    /* compute the crc for up to seven trailing bytes */
+    while (len) {
+        crc0 = _mm_crc32_u8(crc0, *next);
+        next++;
+        len--;
+    }
+
+    /* return a post-processed crc */
+    return (uint32_t)(crc0 ^ 0xffffffff);
+}
+#else
 /* Compute CRC-32C using the Intel hardware instruction. */
 uint32_t crc32c(const void *buf, size_t len, uint32_t crc)
 {
@@ -312,3 +393,4 @@ uint32_t crc32c(const void *buf, size_t len, uint32_t crc)
     /* return a post-processed crc */
     return (uint32_t)(crc0 ^ 0xffffffff);
 }
+#endif

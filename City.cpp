@@ -485,7 +485,7 @@ uint128 CityHash128(const char *s, size_t len) {
   }
 }
 
-#if defined(__SSE4_2__) && defined(__x86_64__)
+#if (defined(__SSE4_2__) && defined(__x86_64__)) || defined(__e2k__)
 #include <nmmintrin.h>
 
 // Requires len >= 240.

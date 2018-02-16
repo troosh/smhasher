@@ -56,9 +56,13 @@ typedef unsigned __int64 uint64_t;
 #include <stdint.h>
 #endif
 
+#ifdef __e2k__
+#include <e2kintrin.h>
+#endif
+
 #ifdef __GNUC__
 #define _MUM_ATTRIBUTE_UNUSED  __attribute__((unused))
-# ifdef __clang__
+# if defined(__clang__) || defined(__e2k__)
 #  define _MUM_OPTIMIZE(opts)
 # else
 #  define _MUM_OPTIMIZE(opts) __attribute__((__optimize__ (opts)))
@@ -118,6 +122,9 @@ _mum (uint64_t v, uint64_t p) {
      very slow.  */
   lo = v * p, hi;
   asm ("umulh %0, %1, %2" : "=r" (hi) : "r" (v), "r" (p));
+#elif defined(__e2k__)
+  lo = v * p;
+  hi = __builtin_e2k_umulhd(v, p);
 #else
   __uint128_t r = (__uint128_t) v * (__uint128_t) p;
   hi = (uint64_t) (r >> 64);
@@ -300,7 +307,8 @@ _mum_hash_avx2 (const void * key, size_t len, uint64_t seed) {
 #if defined(__x86_64__) || defined(__i386__) || defined(__PPC64__) \
     || defined(__s390__) || defined(__m32c__) || defined(cris)     \
     || defined(__CR16__) || defined(__vax__) || defined(__m68k__) \
-    || defined(__aarch64__) || defined(_M_AMD64) || defined(_M_IX86)
+    || defined(__aarch64__) || defined(_M_AMD64) || defined(_M_IX86) \
+    || (defined(__e2k__) && !defined(__ALIGNED__))
 #define _MUM_UNALIGNED_ACCESS 1
 #else
 #define _MUM_UNALIGNED_ACCESS 0

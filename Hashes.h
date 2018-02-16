@@ -6,7 +6,7 @@
 #include "MurmurHash2.h"
 #include "MurmurHash3.h"
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__e2k__)
 #include "xxhash.h"
 #include "metrohash.h"
 #include "cmetrohash.h"
@@ -53,7 +53,7 @@ void scrypt_64a            ( const void * key, int len, uint32_t seed, void * ou
 #ifdef __SSE2__
 void hasshe2_test          ( const void * key, int len, uint32_t seed, void * out );
 #endif
-#if defined(__SSE4_2__) && defined(__x86_64__)
+#if defined(__SSE4_2__) && ((defined(__x86_64__)) || defined(__e2k__))
 void crc32c_hw_test        ( const void * key, int len, uint32_t seed, void * out );
 void crc32c_hw1_test       ( const void * key, int len, uint32_t seed, void * out );
 void crc64c_hw_test        ( const void * key, int len, uint32_t seed, void * out );
@@ -136,7 +136,7 @@ inline void jodyhash64_test( const void * key, int len, uint32_t seed, void * ou
   *(uint32_t*)out = (uint32_t) jody_block_hash((const jodyhash_t *)key, (jodyhash_t) seed, (size_t) len);
 }
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__e2k__)
 inline void xxHash32_test( const void * key, int len, uint32_t seed, void * out ) {
   *(uint32_t*)out = (uint32_t) XXH32(key, (size_t) len, (unsigned) seed);
 }
@@ -156,7 +156,7 @@ inline void metrohash128_1_test ( const void * key, int len, uint32_t seed, void
 inline void metrohash128_2_test ( const void * key, int len, uint32_t seed, void * out ) {
   metrohash128_2((const uint8_t *)key,(uint64_t)len,seed,(uint8_t *)out);
 }
-#if defined(__SSE4_2__) && defined(__x86_64__)
+#if defined(__SSE4_2__) && (defined(__x86_64__) || defined(__e2k__))
 inline void metrohash64crc_1_test ( const void * key, int len, uint32_t seed, void * out ) {
   metrohash64crc_1((const uint8_t *)key,(uint64_t)len,seed,(uint8_t *)out);
 }
@@ -198,7 +198,7 @@ inline void t1ha_test(const void * key, int len, uint32_t seed, void * out)
 
 void mum_hash_test(const void * key, int len, uint32_t seed, void * out);
 
-#if (defined(__SSE4_2__) && defined(__x86_64__)) || defined(_M_X64)
+#if (defined(__SSE4_2__) && (defined(__x86_64__) || defined(__e2k__))) || defined(_M_X64) 
 inline void t1ha_crc_test(const void * key, int len, uint32_t seed, void * out)
 {
   *(uint64_t*)out = t1ha_ia32crc(key, len, seed);

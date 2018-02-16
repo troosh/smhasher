@@ -369,7 +369,7 @@ extern		"C" {
 #ifdef __SSE2__
   void		  hasshe2 (const void *input, int len, uint32_t seed, void *out);
 #endif
-#if defined(__SSE4_2__) && defined(__x86_64__)
+#if defined(__SSE4_2__) && (defined(__x86_64__) || defined(__e2k__))
   uint32_t	  crc32c_hw(const void *input, int len, uint32_t seed);
   uint32_t	  crc32c(const void *input, int len, uint32_t seed);
   uint64_t	  crc64c_hw(const void *input, int len, uint32_t seed);
@@ -392,7 +392,7 @@ hasshe2_test(const void *input, int len, uint32_t seed, void *out)
 }
 #endif
 
-#if defined(__SSE4_2__) && (defined(__i686__) || defined(_M_IX86) || defined(__x86_64__))
+#if defined(__SSE4_2__) && (defined(__i686__) || defined(_M_IX86) || defined(__x86_64__) || defined(__e2k__))
 /* Compute CRC-32C using the Intel hardware instruction.
    TODO: arm8
  */
@@ -415,7 +415,7 @@ crc32c_hw1_test(const void *input, int len, uint32_t seed, void *out)
   }
   *(uint32_t *) out = crc32c(input, len, seed);
 }
-#if defined(__SSE4_2__) && defined(__x86_64__)
+#if defined(__SSE4_2__) && (defined(__x86_64__) || defined(__e2k__))
 /* Compute CRC-64C using the Intel hardware instruction. */
 void
 crc64c_hw_test(const void *input, int len, uint32_t seed, void *out)
@@ -493,7 +493,7 @@ halfsiphash_test(const void *input, int len, uint32_t seed, void *out)
 }
 
 /* https://github.com/gamozolabs/falkhash */
-#if defined(__SSE4_2__) && defined(__x86_64__)
+#if defined(__SSE4_2__) && (defined(__x86_64__) || defined(__e2k__))
 extern "C" {
   uint64_t falkhash_test(uint8_t *data, uint64_t len, uint32_t seed, void *out);
 }

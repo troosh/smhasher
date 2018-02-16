@@ -73,7 +73,6 @@ siphash(const unsigned char key[16], const unsigned char *m, size_t len) {
 	sipcompress()
 	return v0 ^ v1 ^ v2 ^ v3;
 
-#undef sipcompress
 }
 
 /* The 64bit 1-3 variant */

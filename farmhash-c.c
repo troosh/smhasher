@@ -28,7 +28,7 @@
 
 // PLATFORM-SPECIFIC CONFIGURATION
 
-#if defined (__x86_64) || defined (__x86_64__)
+#if defined (__x86_64) || defined (__x86_64__) || defined(__e2k__)
 #define x86_64 1
 #else
 #define x86_64 0
